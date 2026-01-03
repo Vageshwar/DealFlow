@@ -1,0 +1,22 @@
+[
+    {
+        "id": "clause-001",
+        "title": "Negative Pledge",
+        "content": "The Borrower shall not created or permit to subsist any Security over any of its assets.\n\n(a) No Agent or Arranger shall be bound to enquire: \n(i) whether or not any Default has occurred; \n(ii) as to the performance, default or any breach by any Party of its obligations under any Finance Document; or \n(iii) whether any other event specified in any Finance Document has occurred."
+    },
+    {
+        "id": "clause-002",
+        "title": "Events of Default",
+        "content": "Non-payment: The Obligor does not pay on the due date any amount payable pursuant to a Finance Document at the place at and in the currency in which it is expressed to be payable unless: \n(i) its failure to pay is caused by administrative or technical error; and \n(ii) payment is made within three Business Days of its due date."
+    },
+    {
+        "id": "clause-003",
+        "title": "Change of Control",
+        "content": "If any person or group of persons acting in concert gains control of the Borrower:\n(a) the Borrower shall promptly notify the Agent upon becoming aware of that event;\n(b) a Lender shall not be obliged to fund a Utilisation (except for a Rollover Loan); and\n(c) if a Lender so requires and notifies the Agent within [20] Days of the Borrower notifying the Agent of the event, the Agent shall, by not less than [10] Days notice to the Borrower, cancel the Commitment of that Lender and declare the participation of that Lender in all Loans, together with accrued interest, and all other amounts accrued or outstanding under the Finance Documents be immediately due and payable."
+    },
+    {
+        "id": "clause-004",
+        "title": "Governing Law",
+        "content": "This Agreement and any non-contractual obligations arising out of or in connection with it are governed by English law."
+    }
+]

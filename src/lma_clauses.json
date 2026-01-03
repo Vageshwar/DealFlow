@@ -1,0 +1,22 @@
+[
+    {
+        "id": "clause-001",
+        "title": "Negative Pledge",
+        "content": "The Borrower shall not created or permit to subsist any Security over any of its assets."
+    },
+    {
+        "id": "clause-002",
+        "title": "Events of Default",
+        "content": "Non-payment: The Obligor does not pay on the due date any amount payable pursuant to a Finance Document."
+    },
+    {
+        "id": "clause-003",
+        "title": "Change of Control",
+        "content": "If any person or group of persons acting in concert gains control of the Borrower."
+    },
+    {
+        "id": "clause-004",
+        "title": "Governing Law",
+        "content": "This Agreement and any non-contractual obligations arising out of or in connection with it are governed by English law."
+    }
+]
