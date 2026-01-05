@@ -133,3 +133,5 @@ release
 # Agent
 .agent
 
+
+/src/generated/prisma

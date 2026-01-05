@@ -69,6 +69,18 @@ export default function AuditLog({ logs }) {
                                     {log.hash.substring(log.hash.length - 8)}
                                 </span>
                             </div>
+
+                            {/* TX Hash Display */}
+                            {log.txHash && (
+                                <div className="mt-1 bg-emerald-950/20 border border-emerald-900/30 rounded p-1.5 font-mono text-[9px] text-emerald-500 truncate flex items-center gap-2">
+                                    <span className="text-emerald-700 select-none">TX ID:</span>
+                                    <span title={log.txHash}>
+                                        {log.txHash.substring(0, 10)}
+                                        <span className="opacity-30">...</span>
+                                        {log.txHash.substring(log.txHash.length - 8)}
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 ))}

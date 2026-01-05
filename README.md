@@ -44,11 +44,12 @@ While the MVP simulates the core interaction, the production vision moves toward
 - **Current**: In-memory storage for hackathon speed.
 - **Future**: Migrate to **PostgreSQL** or **SQLite** (local-first) to store document states, user profiles, and chat history persistently.
 
-### Phase 3: Distributed Ledger Technology (DLT)
-- **Current**: A linear Hash Chain (SHA-256) maintained on the central server.
-- **Future**: Integration with **Hyperledger Fabric** or **Corda**.
-    - Each "Commit" will be a transaction on a private permissioned blockchain.
-    - Smart Contracts will validate clause logic automatically (e.g., "Interest Rate cannot be < 0%").
+### Phase 3: Real Local Blockchain (Hardhat)
+- **Current**: A linear Hash Chain (SHA-256) maintained in memory.
+- **Future**: 
+    - **Hardhat Network**: Spin up a full, industry-standard Ethereum node locally (`npx hardhat node`).
+    - **Smart Contract Registry**: A Solidity contract (`DealRegistry.sol`) that permanently records the hash of every document version.
+    - **Real Web3 Transactions**: The application will sign and send actual transactions to this local network, generating real Transaction Hashes (0x...) without gas costs.
 
 ### Phase 4: AI Assisted Drafting
 - **Plan**: Fine-tuned LLMs to suggest negotiation fallbacks based on market precedents.

@@ -3,33 +3,65 @@ import ClauseLibrary from './components/ClauseLibrary';
 import DocumentEditor from './components/DocumentEditor';
 import AuditLog from './components/AuditLog';
 import ChatPanel from './components/ChatPanel';
-import UserSwitcher from './components/UserSwitcher'; // Import Switcher
-import { Terminal, Activity, Wifi, WifiOff } from 'lucide-react'; // Added icons
+import LoginScreen from './components/LoginScreen';
+import Dashboard from './components/Dashboard'; // Import Dashboard
+import { Terminal, Wifi, WifiOff, LogOut, ChevronLeft } from 'lucide-react';
 import { io } from "socket.io-client";
-import { useUser } from './context/UserContext'; // Import Hook
-import { Toaster, toast } from 'sonner'; // Import Sonner
+import { useUser } from './context/UserContext';
+import { Toaster, toast } from 'sonner';
 
 // Connect to backend (ensure port matches server)
-const socket = io("http://localhost:3001");
+const socket = io("http://localhost:3001", { autoConnect: false });
 
 function App() {
-    const [docContent, setDocContent] = useState("# SYNDICATED FACILITY AGREEMENT\n\n1. DEFINITIONS\n...");
-    const [savedContent, setSavedContent] = useState("# SYNDICATED FACILITY AGREEMENT\n\n1. DEFINITIONS\n...");
+    const [user, setUser] = useState(null);
+    const { setCurrentUser } = useUser();
+
+    // Routing State
+    const [activeDocId, setActiveDocId] = useState(null);
+
+    const [docContent, setDocContent] = useState("");
+    const [savedContent, setSavedContent] = useState("");
     const [auditLogs, setAuditLogs] = useState([]);
     const [isConnected, setIsConnected] = useState(false);
-
-    const { currentUser } = useUser(); // Use Context
     const [chatMessages, setChatMessages] = useState([]);
 
-    // Editor imperative handle to control cursor/inserts
     const editorRef = useRef(null);
 
+    // 1. Check LocalStorage
     useEffect(() => {
+        const storedUser = localStorage.getItem('dealflow_user');
+        if (storedUser) {
+            loginUser(JSON.parse(storedUser));
+        }
+    }, []);
+
+    // 2. Login
+    const loginUser = (userData) => {
+        setUser(userData);
+        setCurrentUser(userData);
+        localStorage.setItem('dealflow_user', JSON.stringify(userData));
+
+        socket.auth = { userID: userData.name };
+        socket.connect();
+    };
+
+    // 3. Logout
+    const logoutUser = () => {
+        setUser(null);
+        setActiveDocId(null);
+        localStorage.removeItem('dealflow_user');
+        socket.disconnect();
+        toast("Logged out successfully");
+    };
+
+    // 4. Socket & Room Logic
+    useEffect(() => {
+        if (!user) return;
+
         socket.on('connect', () => {
             setIsConnected(true);
             toast.success('Secure Connection Established');
-            // Join the room immediately
-            socket.emit('join-document', 'main-room');
         });
 
         socket.on('disconnect', () => {
@@ -37,38 +69,32 @@ function App() {
             toast.error('Connection Lost - Reconnecting...');
         });
 
-        // Initial Sync
+        // Document Events
         socket.on('load-document', (content) => {
-            setDocContent(content);
-            setSavedContent(content);
+            setDocContent(content || "");
+            setSavedContent(content || "");
         });
 
-        // Initial Sync
         socket.on('load-audit', (logs) => {
             setAuditLogs(logs);
         });
 
-        // New Block Mined
         socket.on('new-audit-entry', (newBlock) => {
             setAuditLogs(prev => [...prev, newBlock]);
-            toast.message('Blockchain Update', {
-                description: `Block Verified: ${newBlock.hash.substring(0, 8)}...`,
-                action: {
-                    label: 'View',
-                    onClick: () => console.log('View block')
-                },
-            });
+            if (newBlock.userName !== user.name) {
+                toast.message('Blockchain Update', {
+                    description: `Block Verified: ${newBlock.hash.substring(0, 8)}...`,
+                });
+            }
         });
 
-        // Remote Text Changes
         socket.on('text-change', (data) => {
             setDocContent(data.content);
         });
 
-        // Chat Messages
         socket.on('chat-message', (msg) => {
             setChatMessages(prev => [...prev, msg]);
-            if (msg.user !== currentUser.name) {
+            if (msg.user !== user.name) {
                 toast(`${msg.user}: ${msg.text}`);
             }
         });
@@ -82,34 +108,41 @@ function App() {
             socket.off('text-change');
             socket.off('chat-message');
         };
-    }, [currentUser.name]);
+    }, [user]);
+
+    // Role Management: Join/Leave Rooms based on activeDocId
+    useEffect(() => {
+        if (!isConnected || !activeDocId) return;
+
+        console.log(`Joining Room: ${activeDocId}`);
+        socket.emit('join-document', activeDocId);
+
+        // Reset state for new doc
+        setDocContent("Loading...");
+        setAuditLogs([]);
+        setChatMessages([]);
+
+    }, [activeDocId, isConnected]);
+
 
     const handleInsertClause = (text) => {
         if (editorRef.current) {
             editorRef.current.insertText(text);
-            // The editor will trigger onChange automatically, which emits the socket event
         } else {
-            // Fallback if editor not mounted
             const newContent = docContent + "\n\n" + text;
             setDocContent(newContent);
-            socket.emit('text-change', {
-                docId: 'main-room',
-                content: newContent
-            });
+            socket.emit('text-change', { docId: activeDocId, content: newContent });
         }
     };
 
     const handleEditorChange = (value) => {
         setDocContent(value);
-        socket.emit('text-change', {
-            docId: 'main-room',
-            content: value
-        });
+        socket.emit('text-change', { docId: activeDocId, content: value });
     };
 
     const handleSendMessage = (text) => {
         socket.emit('chat-message', {
-            user: currentUser.name,
+            user: user.name,
             text,
             time: new Date()
         });
@@ -117,35 +150,50 @@ function App() {
 
     const handleSave = () => {
         const loadingToast = toast.loading('Hashing & Verifying...');
-
-        // Simulate slight network delay for dramatic effect
         setTimeout(() => {
             socket.emit('commit-change', {
-                docId: 'main-room',
-                user: currentUser.name,
-                action: `Manual Save by ${currentUser.role}`
+                docId: activeDocId,
+                user: user.name,
+                action: `Manual Save by ${user.role}`
             });
             setSavedContent(docContent);
             toast.dismiss(loadingToast);
         }, 800);
     };
 
+    // RENDER: LOGIN
+    if (!user) {
+        return (
+            <>
+                <Toaster theme="dark" position="bottom-right" />
+                <LoginScreen onLogin={loginUser} />
+            </>
+        );
+    }
+
     return (
         <div className="h-screen w-screen bg-slate-950 text-slate-200 flex flex-col overflow-hidden">
             <Toaster theme="dark" position="bottom-right" />
 
             {/* HEADER */}
-            <header className="h-12 border-b border-slate-800 bg-slate-950 flex items-center justify-between px-4 shrink-0 z-10">
-                <div className="flex items-center gap-3">
+            <header className="h-12 border-b border-slate-800 bg-slate-950 flex items-center justify-between pl-20 pr-4 shrink-0 z-10 select-none" style={{ WebkitAppRegion: "drag" }}>
+                <div className="flex items-center gap-3" style={{ WebkitAppRegion: "no-drag" }}>
+                    {activeDocId && (
+                        <button
+                            onClick={() => setActiveDocId(null)}
+                            className="mr-2 p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors"
+                        >
+                            <ChevronLeft className="w-5 h-5" />
+                        </button>
+                    )}
+
                     <div className="p-1 bg-blue-500/10 rounded border border-blue-500/20">
                         <Terminal className="w-5 h-5 text-blue-500" />
                     </div>
                     <h1 className="text-lg font-bold tracking-tight text-slate-100">DealFlow <span className="text-slate-600 font-normal">| Live Deal Room</span></h1>
                 </div>
 
-                <div className="flex items-center gap-4">
-                    <UserSwitcher />
-
+                <div className="flex items-center gap-4" style={{ WebkitAppRegion: "no-drag" }}>
                     <div className={`flex items-center gap-2 px-3 py-1 rounded-full border transition-colors ${isConnected ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-500' : 'bg-rose-950/30 border-rose-500/30 text-rose-500'}`}>
                         {isConnected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
                         <span className="text-[10px] font-mono tracking-wide font-semibold">
@@ -153,39 +201,54 @@ function App() {
                         </span>
                     </div>
 
-                    {/* Initials Badge */}
-                    <div className={`w-8 h-8 rounded-full ${currentUser.color} flex items-center justify-center text-xs font-bold border-2 border-slate-800 ring-2 ring-slate-900 shadow-lg`}>
-                        {currentUser.name.substring(0, 2).toUpperCase()}
+                    <div className="h-6 w-px bg-slate-800"></div>
+
+                    {/* User Profile */}
+                    <div className="flex items-center gap-3">
+                        <div className="text-right hidden sm:block">
+                            <div className="text-xs font-bold text-white leading-none">{user.name}</div>
+                            <div className="text-[10px] text-slate-500 leading-none mt-1 uppercase tracking-wide">{user.role}</div>
+                        </div>
+                        <div className={`w-8 h-8 rounded-full ${user.color} flex items-center justify-center text-xs font-bold border-2 border-slate-800 ring-2 ring-slate-900 shadow-lg`}>
+                            {user.name.substring(0, 2).toUpperCase()}
+                        </div>
                     </div>
+
+                    <button
+                        onClick={logoutUser}
+                        className="p-2 hover:bg-slate-800 rounded-lg text-slate-500 hover:text-rose-500 transition-colors"
+                        title="Logout"
+                    >
+                        <LogOut className="w-4 h-4" />
+                    </button>
                 </div>
             </header>
 
-            {/* MAIN LAYOUT */}
-            <div className="flex-1 flex overflow-hidden">
-                {/* LEFT: CLAUSE LIBRARY */}
-                <ClauseLibrary onInsert={handleInsertClause} />
-
-                {/* CENTER: EDITOR */}
-                <div className="flex-1 flex flex-col min-w-0 border-r border-slate-800 relative z-0">
-                    <DocumentEditor
-                        ref={editorRef}
-                        code={docContent}
-                        originalContent={savedContent}
-                        onChange={handleEditorChange}
-                        onSave={handleSave}
-                    />
+            {/* MAIN CONTENT: DASHBOARD vs EDITOR */}
+            {!activeDocId ? (
+                <Dashboard onSelectDoc={setActiveDocId} currentUser={user} />
+            ) : (
+                <div className="flex-1 flex overflow-hidden">
+                    <ClauseLibrary onInsert={handleInsertClause} />
+                    <div className="flex-1 flex flex-col min-w-0 border-r border-slate-800 relative z-0">
+                        <DocumentEditor
+                            ref={editorRef}
+                            code={docContent}
+                            originalContent={savedContent}
+                            onChange={handleEditorChange}
+                            onSave={handleSave}
+                        />
+                    </div>
+                    <div className="w-80 flex flex-col shrink-0 bg-slate-950">
+                        <AuditLog logs={auditLogs} />
+                        <ChatPanel
+                            messages={chatMessages}
+                            onSendMessage={handleSendMessage}
+                            currentUser={user}
+                        />
+                    </div>
                 </div>
-
-                {/* RIGHT: AUDIT & CHAT */}
-                <div className="w-80 flex flex-col shrink-0 bg-slate-950">
-                    <AuditLog logs={auditLogs} />
-                    <ChatPanel
-                        messages={chatMessages}
-                        onSendMessage={handleSendMessage}
-                        currentUser={currentUser}
-                    />
-                </div>
-            </div>
+            )}
         </div>
     );
 }

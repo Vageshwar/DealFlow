@@ -9,7 +9,7 @@ export const USERS = [
 ];
 
 export function UserProvider({ children }) {
-    const [currentUser, setCurrentUser] = useState(USERS[0]);
+    const [currentUser, setCurrentUser] = useState(null);
 
     return (
         <UserContext.Provider value={{ currentUser, setCurrentUser, USERS }}>
