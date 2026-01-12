@@ -94,12 +94,12 @@ const createHash = (prev, user, action, time) => {
 io.on('connection', (socket) => {
   console.log(`User connected: ${socket.id}`);
 
-  // 1. Join Document & Load Initial State
+  // 1. Join Document & Load Initial State & Audit Logs
   socket.on('join-document', async (docId) => {
     socket.join(docId);
     console.log(`User ${socket.id} joined doc ${docId}`);
     
-    // Fetch from DB
+    // 1a. Fetch Document Content
     const doc = await prisma.document.findUnique({
         where: { id: docId }
     });
@@ -109,17 +109,26 @@ io.on('connection', (socket) => {
     } else {
         socket.emit('load-document', "");
     }
-  });
 
-  // 2. Load Audit Log
-  const loadLogs = async () => {
-       const logs = await prisma.auditLog.findMany({
-           where: { docId: 'main-room' }, 
-           orderBy: { id: 'asc' } 
-       });
-       socket.emit('load-audit', logs);
-  };
-  loadLogs();
+    // 1b. Fetch Audit Logs for this Doc
+    const logs = await prisma.auditLog.findMany({
+        where: { docId: docId }, 
+        orderBy: { id: 'asc' } 
+    });
+    socket.emit('load-audit', logs);
+    // 1c. Fetch Chat History
+    const chatHistory = await prisma.chatMessage.findMany({
+        where: { docId: docId },
+        orderBy: { timestamp: 'asc' }
+    });
+    // Map to frontend format
+    const formattedChat = chatHistory.map(msg => ({
+        user: msg.userName,
+        text: msg.text,
+        time: msg.timestamp
+    }));
+    socket.emit('load-chat', formattedChat);
+  });
 
   // 3. Real-Time Collaboration
   socket.on('text-change', async (data) => {
@@ -184,8 +193,21 @@ io.on('connection', (socket) => {
   });
 
   // 5. Chat
-  socket.on('chat-message', (msg) => {
-    // msg: { user, text, time }
+  socket.on('chat-message', async (msg) => {
+    // msg: { docId, user, text, time } -- Front end needs to send docId
+    
+    // Save to DB
+    if (msg.docId) {
+        await prisma.chatMessage.create({
+            data: {
+                docId: msg.docId,
+                userName: msg.user,
+                text: msg.text,
+                timestamp: new Date(msg.time)
+            }
+        });
+    }
+
     // Broadcast to everyone
     io.emit('chat-message', msg);
   });

@@ -1,15 +1,16 @@
 {
   "_format": "hh3-sol-build-info-1",
-  "id": "solc-0_8_24-e5338b066361d8bce17db79a46eb129c41172e3f",
-  "solcVersion": "0.8.24",
-  "solcLongVersion": "0.8.24+commit.e11b9ed9",
+  "id": "solc-0_8_28-d5c52a96b639fcce585f8a3c04b7e2468bbe252d",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
   "userSourceNameMap": {
+    "contracts/Counter.sol": "project/contracts/Counter.sol",
     "contracts/DealRegistry.sol": "project/contracts/DealRegistry.sol"
   },
   "input": {
     "language": "Solidity",
     "settings": {
-      "evmVersion": "shanghai",
+      "evmVersion": "cancun",
       "outputSelection": {
         "*": {
           "": [
@@ -27,6 +28,9 @@
       "remappings": []
     },
     "sources": {
+      "project/contracts/Counter.sol": {
+        "content": "// SPDX-License-Identifier: UNLICENSED\npragma solidity ^0.8.28;\n\ncontract Counter {\n  uint public x;\n\n  event Increment(uint by);\n\n  function inc() public {\n    x++;\n    emit Increment(1);\n  }\n\n  function incBy(uint by) public {\n    require(by > 0, \"incBy: increment should be positive\");\n    x += by;\n    emit Increment(by);\n  }\n}\n"
+      },
       "project/contracts/DealRegistry.sol": {
         "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.24;\n\ncontract DealRegistry {\n    struct LogEntry {\n        string docId;\n        string user;\n        string action;\n        string docHash;\n        uint256 timestamp;\n    }\n\n    LogEntry[] public logs;\n\n    event LogAppended(string indexed docId, uint256 indexed index, string user, string docHash);\n\n    function appendLog(string memory _docId, string memory _user, string memory _action, string memory _docHash) public {\n        logs.push(LogEntry({\n            docId: _docId,\n            user: _user,\n            action: _action,\n            docHash: _docHash,\n            timestamp: block.timestamp\n        }));\n\n        emit LogAppended(_docId, logs.length - 1, _user, _docHash);\n    }\n\n    function getLogsCount() public view returns (uint256) {\n        return logs.length;\n    }\n}\n"
       }

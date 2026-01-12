@@ -15,6 +15,7 @@ model User {
   color     String   @default("bg-slate-700")
   password  String   @default("password123")
   logs      AuditLog[]
+  messages  ChatMessage[]
 }
 
 model Document {
@@ -25,6 +26,7 @@ model Document {
   hash      String   @default("genesis") 
   updatedAt DateTime @updatedAt
   logs      AuditLog[]
+  messages  ChatMessage[]
 }
 
 model AuditLog {
@@ -40,4 +42,16 @@ model AuditLog {
   userName     String
   document     Document @relation(fields: [docId], references: [id])
   docId        String
+}
+
+model ChatMessage {
+  id        Int      @id @default(autoincrement())
+  text      String
+  timestamp DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userName], references: [name])
+  userName  String
+  document  Document @relation(fields: [docId], references: [id])
+  docId     String
 }

@@ -92,6 +92,10 @@ function App() {
             setDocContent(data.content);
         });
 
+        socket.on('load-chat', (history) => {
+            setChatMessages(history);
+        });
+
         socket.on('chat-message', (msg) => {
             setChatMessages(prev => [...prev, msg]);
             if (msg.user !== user.name) {
@@ -107,6 +111,7 @@ function App() {
             socket.off('new-audit-entry');
             socket.off('text-change');
             socket.off('chat-message');
+            socket.off('load-chat');
         };
     }, [user]);
 
@@ -142,6 +147,7 @@ function App() {
 
     const handleSendMessage = (text) => {
         socket.emit('chat-message', {
+            docId: activeDocId, // Include DocID for persistence
             user: user.name,
             text,
             time: new Date()
